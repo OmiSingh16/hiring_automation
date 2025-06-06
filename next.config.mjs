@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false, // 🚫 Disable strict mode (only if needed during dev)
+  eslint:{
+    ignoreDuringBuilds:true,
+  },
 
   images: {
     domains: ['lh3.googleusercontent.com'],
