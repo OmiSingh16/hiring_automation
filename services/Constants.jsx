@@ -90,3 +90,17 @@ format: interview Questions=[
   ...
 }]
   The goal is to create a structured , relevant , and time-optimize interview plan for a {{jobTitle}} role.`
+
+
+
+ export const FEEDBACK_PROMPT = `
+Based on the following interview conversation, provide structured feedback.
+Conversation: {{conversation}}
+
+Format the feedback as a JSON object with:
+- strengths
+- weaknesses
+- overall_score (out of 10)
+- improvement_suggestions
+- recommendation
+`;

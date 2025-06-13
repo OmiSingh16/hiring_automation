@@ -13,7 +13,7 @@ function Interview() {
   const { interview_id } = useParams();
   const [interviewData, setInterviewData] = useState();
   const [userName, setUserName] = useState("");
-  const [email, setEmail] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const { interviewInfo, setInterviewInfo } = useContext(InterviewDataContext);
 
@@ -65,6 +65,7 @@ function Interview() {
 
       setInterviewInfo({
         userName: userName,
+        userEmail:userEmail,
         interviewData: Interviews[0],
       });
       router.push(`/interview/${interview_id}/start`);
@@ -111,8 +112,8 @@ function Interview() {
           <h2 className="mt-4">Enter your Email</h2>
           <Input
             placeholder="e.g om@gmail.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={userEmail}
+            onChange={(e) => setUserEmail(e.target.value)}
           />
         </div>
 
@@ -135,7 +136,7 @@ function Interview() {
         </div>
         <Button
           className="mt-5 w-full font-bold"
-          disabled={loading || !userName}
+          disabled={loading || !userName || !userEmail}
           onClick={onJoinInterview}
         >
           <Video />

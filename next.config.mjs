@@ -15,6 +15,25 @@ const nextConfig = {
     };
     return config;
   },
+  async headers() {
+    return [
+      {
+        source: "/api/(.*)", // Or "/(.*)" for all routes
+        headers: [
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*", // Allow all (or restrict to "https://*.vapi.ai")
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, OPTIONS",
+          },
+        ],
+      },
+    ];
+  },
+
 };
+
 
 export default nextConfig;

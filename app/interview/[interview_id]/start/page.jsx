@@ -1,136 +1,179 @@
 "use client";
 import { InterviewDataContext } from "@/context/InterviewDataContext";
-import { Mic, Phone, Timer } from "lucide-react";
+import { Mic, Phone, Timer, Loader2Icon } from "lucide-react";
 import Image from "next/image";
-import React, { useContext, useEffect, useRef } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import Vapi from "@vapi-ai/web";
+import { toast } from "sonner";
+import axios from "axios";
+import { supabase } from "@/services/supabaseClient";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 function StartInterview() {
   const { interviewInfo } = useContext(InterviewDataContext);
-  const vapiRef = useRef(null);
-  const callStartedRef = useRef(false);
+  const [vapi] = useState(() => new Vapi(process.env.NEXT_PUBLIC_VAPI_API_KEY));
+  const [callStatus, setCallStatus] = useState("idle");
+  const [timer, setTimer] = useState(0);
+  const [speakingAgent, setSpeakingAgent] = useState(false);
+  const [speakingUser, setSpeakingUser] = useState(false);
+  const [conversation, setConversation] = useState([]);
+  const [isEnding, setIsEnding] = useState(false);
 
-  // Error handler with filtering
-  const onError = (error) => {
-    if (error?.errorMsg === "Meeting has ended") {
-      console.log("Meeting ended error ignored.");
-      // Reset callStarted to allow new calls if needed
-      callStartedRef.current = false;
-      return;
-    }
-    console.error("Vapi error:", error);
-  };
-
-  // Start Vapi call function
-  const startCall = () => {
-    if (callStartedRef.current) {
-      console.log("Call already started, skipping start.");
-      return;
-    }
-
-    if (!interviewInfo) {
-      console.warn("No interviewInfo available, cannot start call.");
-      return;
-    }
-
-    const questionList = interviewInfo?.interviewData?.questionList
-      ?.map((item) => item?.question)
-      .join(", ");
-
-    const assistantOptions = {
-      name: "AI Recruiter",
-      firstMessage: `Hi ${interviewInfo?.userName}, how are you? Ready for your interview on ${interviewInfo?.interviewData?.jobposition}?`,
-      transcriber: {
-        provider: "deepgram",
-        model: "nova-2",
-        language: "en-US",
-      },
-      voice: {
-        provider: "playht",
-        voiceId: "Jennifer",
-      },
-      model: {
-        provider: "openai",
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: `
-You are an AI voice assistant conducting interviews.
-
-Your job is to ask candidates the provided interview questions and assess their responses.
-
-Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example:
-"Hey there! Welcome to your ${interviewInfo?.interviewData?.jobposition} interview. Let's get started with a few questions!"
-
-Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. Below are the questions:
-Questions: ${questionList}
-
-If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
-"Need a hint? Think about how React tracks component updates!"
-
-Provide brief, encouraging feedback after each answer. Examples:
-"Nice! That's a solid answer."
-or
-"Hmm, not quite! Want to try again?"
-
-Keep the conversation natural and engaging—use casual phrases like
-"Alright, next up..." or "Let's tackle a tricky one!"
-
-After 5–7 questions, wrap up the interview smoothly by summarizing their performance. Example:
-"That was great! You handled some tough questions well. Keep sharpening your skills!"
-
-End on a positive note:
-"Thanks for chatting! Hope to see you crushing projects soon!"
-
-Key Guidelines:
-- Be friendly, engaging, and witty
-- Keep responses short and natural, like a real conversation
-- Adapt based on the candidate's confidence level
-- Ensure the interview remains focused on React.
-            `.trim(),
-          },
-        ],
-      },
-    };
-
-    try {
-      vapiRef.current.start(assistantOptions);
-      callStartedRef.current = true;
-      console.log("🎤 Vapi call started");
-    } catch (error) {
-      console.error("Failed to start Vapi call:", error);
-    }
-  };
+  const { interview_id } = useParams();
+  const searchParams = useSearchParams();
+  const userName = searchParams.get("user") || "Candidate";
+  const router = useRouter();
 
   useEffect(() => {
-    // Create Vapi instance once
-    if (!vapiRef.current) {
-      vapiRef.current = new Vapi(process.env.NEXT_PUBLIC_VAPI_API_KEY);
+    let interval;
+    if (callStatus === "active") {
+      interval = setInterval(() => setTimer((prev) => prev + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [callStatus]);
 
-      vapiRef.current.on("error", onError);
-      vapiRef.current.on("call-ended", () => {
-        callStartedRef.current = false;
-        console.log("Call ended");
+  useEffect(() => {
+    if (!vapi) return;
+
+    const handleError = (error) => {
+      fetch("/api/log-error", {
+        method: "POST",
+        body: JSON.stringify({
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        }),
       });
-    }
+    };
 
-    // Start call only if interviewInfo is ready
-    if (interviewInfo) {
-      startCall();
-    }
-
-    return () => {
-      if (vapiRef.current) {
-        vapiRef.current.off("error", onError);
-        vapiRef.current.off("call-ended");
-        vapiRef.current.dispose();
-        vapiRef.current = null;
-        callStartedRef.current = false;
-        console.log("Cleaned up Vapi instance");
+    const handleCallStart = () => setCallStatus("active");
+    const handleCallEnd = () => setCallStatus("ended");
+    const handleAgentStart = () => setSpeakingAgent(true);
+    const handleAgentStop = () => setSpeakingAgent(false);
+    const handleUserStart = () => setSpeakingUser(true);
+    const handleUserStop = () => setSpeakingUser(false);
+    const handleMessage = (message) => {
+      if (message?.conversation) {
+        setConversation(message.conversation);
       }
     };
-  }, [interviewInfo]);
+
+    vapi.on("error", handleError);
+    vapi.on("call-start", handleCallStart);
+    vapi.on("call-end", handleCallEnd);
+    vapi.on("speech-start", handleAgentStart);
+    vapi.on("speech-end", handleAgentStop);
+    vapi.on("user-start-speaking", handleUserStart);
+    vapi.on("user-stop-speaking", handleUserStop);
+    vapi.on("message", handleMessage);
+
+    return () => {
+      vapi.off("error", handleError);
+      vapi.off("call-start", handleCallStart);
+      vapi.off("call-end", handleCallEnd);
+      vapi.off("speech-start", handleAgentStart);
+      vapi.off("speech-end", handleAgentStop);
+      vapi.off("user-start-speaking", handleUserStart);
+      vapi.off("user-stop-speaking", handleUserStop);
+      vapi.off("message", handleMessage);
+    };
+  }, [vapi]);
+
+  const formatTime = (seconds) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, "0")}:${mins
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const startCall = async () => {
+    if (!interviewInfo) return console.error("No interview info available");
+    setCallStatus("loading");
+
+    try {
+      const questions = interviewInfo.interviewData?.questionList
+        ?.map((item) => item?.question)
+        .join("|");
+
+      const res = await fetch("/api/vapi/create-workflow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: interviewInfo.userName,
+          jobposition: interviewInfo.interviewData?.jobposition,
+          questions,
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success || !data.workflowId) {
+        throw new Error("Failed to create workflow: " + (data.error || "Unknown error"));
+      }
+
+      await vapi.start(undefined, undefined, undefined, data.workflowId, {
+        variableValues: {
+          username: interviewInfo.userName,
+          jobposition: interviewInfo.interviewData?.jobposition,
+          questions,
+        },
+      });
+    } catch (error) {
+      console.error("❌ Failed to start Vapi call:", error);
+      setCallStatus("idle");
+    }
+  };
+
+  const endCall = async () => {
+    setIsEnding(true);
+    try {
+      await vapi.stop();
+      toast.success("Call ended");
+      await GenerateFeedback();
+    } catch (error) {
+      console.error("❌ Failed to end call:", error);
+      toast.error("Failed to end call");
+    } finally {
+      setIsEnding(false);
+      setCallStatus("ended");
+    }
+  };
+
+  const GenerateFeedback = async () => {
+    if (!conversation || conversation.length === 0) {
+      toast.error("No conversation found. Cannot generate feedback.");
+      return;
+    }
+
+    try {
+      const result = await axios.post("/api/ai-feedback", {
+        conversation,
+      });
+
+      const content = result?.data?.content;
+      if (!content) throw new Error("No content returned from feedback API");
+
+      const FINAL_PROMPT = content.replace("```json", "").replace("```", "");
+
+      const { data, error } = await supabase
+        .from("interview-feedback")
+        .insert([
+          {
+            userName: interviewInfo?.userName,
+            userEmail: interviewInfo?.userEmail,
+            interview_id: interview_id,
+            feedback: JSON.parse(FINAL_PROMPT),
+            recommendation: false,
+          },
+        ])
+        .select();
+
+      router.replace(`/interview/${interview_id}/completed?user=${interviewInfo?.userName}&feedback=saved`);
+    } catch (error) {
+      console.error("❌ Feedback generation failed:", error);
+      toast.error("Failed to generate feedback");
+    }
+  };
 
   return (
     <div className="p-20 lg:px-48 xl:px-56">
@@ -138,13 +181,17 @@ Key Guidelines:
         AI Interview Session
         <span className="flex gap-2 items-center">
           <Timer />
-          00.00.00
+          {formatTime(timer)}
         </span>
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-7 mt-5">
         {/* AI Recruiter */}
-        <div className="bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center">
+        <div
+          className={`bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center transition-all duration-300 ${
+            speakingAgent ? "ring-4 ring-blue-400 shadow-lg scale-105" : ""
+          }`}
+        >
           <Image
             src={"/ai.png"}
             alt="ai"
@@ -154,29 +201,66 @@ Key Guidelines:
             priority
           />
           <h2>AI Recruiter</h2>
+          <p className="text-sm text-gray-500">
+            {callStatus === "active" ? "Speaking..." : "Ready to interview"}
+          </p>
         </div>
 
         {/* User */}
-        <div className="bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center">
-          <h2 className="text-7xl bg-primary text-white p-8 rounded-full px-10">
-            {interviewInfo?.userName?.[0] || "U"}
-          </h2>
-          <h2>{interviewInfo?.userName}</h2>
+        <div
+          className={`bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center relative transition-all duration-300 ${
+            callStatus === "active" && !speakingAgent
+              ? "ring-4 ring-green-400 shadow-lg scale-105"
+              : ""
+          }`}
+        >
+          <div className="relative w-[120px] h-[120px] flex items-center justify-center">
+            <div className="w-[100px] h-[100px] flex items-center justify-center text-5xl bg-primary text-white rounded-full z-10 relative">
+              {interviewInfo?.userName?.[0]?.toUpperCase() || "U"}
+            </div>
+          </div>
+          <h2>{interviewInfo?.userName || "User"}</h2>
+          <p className="text-sm text-gray-500">
+            {callStatus === "active" ? "Microphone active" : "Waiting..."}
+          </p>
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex items-center gap-5 justify-center mt-7">
-        <Mic
-          className="h-12 w-12 p-3 bg-gray-500 text-white rounded-full cursor-pointer"
-          onClick={startCall}
-        />
-
-        <Phone className="h-12 w-12 p-3 bg-red-500 text-white rounded-full cursor-pointer" />
+        {callStatus === "active" || isEnding ? (
+          <button
+            onClick={!isEnding ? endCall : undefined}
+            disabled={isEnding}
+            className="bg-red-500 text-white rounded-full p-3"
+          >
+            {isEnding ? (
+              <Loader2Icon className="animate-spin h-6 w-6" />
+            ) : (
+              <Phone className="h-6 w-6" />
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={startCall}
+            disabled={callStatus === "loading"}
+            className={`bg-green-500 text-white rounded-full p-3 ${
+              callStatus === "loading" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            }`}
+          >
+            {callStatus === "loading" ? (
+              <Loader2Icon className="animate-spin h-6 w-6" />
+            ) : (
+              <Phone className="h-6 w-6" />
+            )}
+          </button>
+        )}
       </div>
 
       <h2 className="text-sm mt-5 text-center text-gray-500">
-        Interview in progress...
+        {callStatus === "idle" && "Ready to start interview"}
+        {callStatus === "loading" && "Initializing interview..."}
+        {callStatus === "active" && "Interview in progress..."}
+        {callStatus === "ended" && "Interview completed"}
       </h2>
     </div>
   );
