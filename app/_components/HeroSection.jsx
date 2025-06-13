@@ -14,16 +14,15 @@ function HeroSection() {
 
   // 🔐 Handle Create Interview Button
   const handleCreateInterview = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
 
-    if (user) {
-      router.push("/dashboard/create-interview");
-    } else {
-      router.push("/auth");
-    }
-  };
+  if (data?.user) {
+    router.push("/dashboard/create-interview");
+  } else {
+    localStorage.setItem("postLoginRedirect", "/dashboard/create-interview");
+    router.push("/auth"); // take user to login
+  }
+};
 
   return (
     <section className="relative py-20 flex items-center justify-center w-full md:py-28 bg-gradient-to-b from-blue-50 to-white">
