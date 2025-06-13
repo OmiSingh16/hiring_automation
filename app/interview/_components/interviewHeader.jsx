@@ -5,7 +5,7 @@ function InterviewHeader() {
   return (
     <div className='p-4 shadow-sm'>
       <Image src={'/logo.png'} alt='logo' width={100} height={100}
-      className='w-[180px]'
+      className='w-[180px]' priority
       />
     </div>
   )

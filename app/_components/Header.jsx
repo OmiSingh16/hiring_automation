@@ -29,7 +29,7 @@ function Header() {
       <div className="px-10 flex h-16 items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <Image src="/logo.png" alt="logo" width={140} height={200} priority />
+          <Image src="/logo.png" alt="logo" width={140} height={200} className="w-auto h-auto" priority />
         </div>
 
         {/* Nav */}

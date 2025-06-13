@@ -8,37 +8,32 @@ import { useRouter } from "next/navigation";
 function Login() {
   const router = useRouter();
 
-  const signInWithGoogle = async (redirectPath = "/dashboard") => {
-  // Store the redirect path for after login
-  localStorage.setItem("postLoginRedirect", redirectPath);
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`, // send user back here
+      },
+    });
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: window.location.origin + "/auth", // redirect back to this page after login
-    },
-  });
-
-  if (error) {
-    console.error("Login error:", error.message);
-  }
-};
-
-
-  useEffect(() => {
-  const checkUser = async () => {
-    const { data } = await supabase.auth.getUser();
-
-    if (data?.user) {
-      const redirectPath = localStorage.getItem("postLoginRedirect") || "/dashboard";
-      localStorage.removeItem("postLoginRedirect");
-      router.push(redirectPath);
+    if (error) {
+      console.log("Error:", error.message);
     }
   };
 
-  checkUser();
-}, [router]);
+  useEffect(() => {
+    // Check if the user is already logged in (after redirect)
+    const checkUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
 
+      if (data?.user) {
+        // ✅ If logged in, redirect to dashboard
+        router.push("/dashboard");
+      }
+    };
+
+    checkUser();
+  }, [router]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">

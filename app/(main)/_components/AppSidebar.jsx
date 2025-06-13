@@ -22,10 +22,12 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className='flex items-center mt-5' >
+        <Link  href={'/'}>
         <Image src = {'/logo.png'} alt='logo' width={200} height={100}
           className="w-[150px]"
           priority
         />
+        </Link>
         <Button className='w-full mt-5' ><Plus/>Create New Interview</Button>
       </SidebarHeader>
       <SidebarContent>

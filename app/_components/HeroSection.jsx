@@ -14,15 +14,28 @@ function HeroSection() {
 
   // 🔐 Handle Create Interview Button
   const handleCreateInterview = async () => {
-  const { data } = await supabase.auth.getUser();
 
-  if (data?.user) {
-    router.push("/dashboard/create-interview");
-  } else {
-    localStorage.setItem("postLoginRedirect", "/dashboard/create-interview");
-    router.push("/auth"); // take user to login
-  }
-};
+   
+   
+
+   
+  
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      router.push("/dashboard/create-interview");
+    } else {
+      const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard/create-interview`, // send user back here
+      },
+    });
+    }
+  };
 
   return (
     <section className="relative py-20 flex items-center justify-center w-full md:py-28 bg-gradient-to-b from-blue-50 to-white">
