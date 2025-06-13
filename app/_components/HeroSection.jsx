@@ -1,13 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ArrowRight, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { supabase } from "@/services/supabaseClient";
+import { useRouter } from "next/navigation";
 
 function HeroSection() {
   const [showVideo, setShowVideo] = useState(false);
+  const router = useRouter();
+
+  // 🔐 Handle Create Interview Button
+  const handleCreateInterview = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      router.push("/dashboard/create-interview");
+    } else {
+      router.push("/auth");
+    }
+  };
 
   return (
     <section className="relative py-20 flex items-center justify-center w-full md:py-28 bg-gradient-to-b from-blue-50 to-white">
@@ -23,11 +39,12 @@ function HeroSection() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Link href="/dashboard/create-interview">
-                <Button className="bg-primary text-primary-foreground hover:bg-blue-700">
-                  Create Interview <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+              <Button
+                className="bg-primary text-primary-foreground hover:bg-blue-700"
+                onClick={handleCreateInterview}
+              >
+                Create Interview <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
               <Button variant="outline" onClick={() => setShowVideo(true)}>Watch Demo</Button>
             </div>
           </div>
@@ -44,7 +61,7 @@ function HeroSection() {
                   priority
                 />
 
-                {/* ▼▼ Play Button Block (Mounted Video Trigger) ▼▼ */}
+                {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex scale-[0.9] items-center justify-center rounded-2xl transition-all duration-200 ease-out group-hover:scale-100">
                   <div className="flex size-28 items-center justify-center rounded-full bg-primary/10 backdrop-blur-md">
                     <div className="relative flex size-20 scale-100 items-center justify-center rounded-full bg-gradient-to-b from-primary/30 to-primary shadow-md transition-all duration-200 ease-out group-hover:scale-[1.2]">
@@ -52,18 +69,16 @@ function HeroSection() {
                     </div>
                   </div>
                 </div>
-                {/* ▲▲ Play Button Block (Mounted Video Trigger) ▲▲ */}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ▼▼ Modal Video Player With Blur Background ▼▼ */}
+      {/* Modal Video Player */}
       {showVideo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black/70">
           <div className="relative w-[90%] max-w-3xl rounded-xl overflow-hidden shadow-2xl">
-            {/* Close Button */}
             <button
               className="absolute top-4 right-4 z-10 text-white bg-black/40 hover:bg-black/60 rounded-full p-2"
               onClick={() => setShowVideo(false)}
@@ -71,9 +86,8 @@ function HeroSection() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Video Content */}
             <video
-              src="/demo.mp4" // 🔁 Replace with your actual video path (e.g., /video/demo.mp4)
+              src="/demo.mp4"
               controls
               autoPlay
               className="w-full h-full object-cover"
@@ -81,7 +95,6 @@ function HeroSection() {
           </div>
         </div>
       )}
-      {/* ▲▲ Modal Video Player With Blur Background ▲▲ */}
     </section>
   );
 }
