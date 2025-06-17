@@ -10,13 +10,75 @@ import { motion } from "framer-motion";
 function InterviewComplete() {
   const searchParams = useSearchParams();
   const userName = searchParams.get("user") || "Candidate";
+  const userEmail = searchParams.get("email") || "";
+  const interviewId = searchParams.get("interview_id");
   const feedbackStatus = searchParams.get("feedback");
+  const recommendation = searchParams.get("recommendation") === "true";
+
+  const conversation =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("conversation") || "[]")
+      : [];
 
   useEffect(() => {
-    if (feedbackStatus === "saved") {
-      toast.success(" Your interview feedback was saved successfully.");
+    const generateAndSaveFeedback = async () => {
+      if (!interviewId) {
+        toast.error("Missing interview ID. Feedback not saved.");
+        return;
+      }
+
+      try {
+        // Step 1: Generate AI feedback
+        const aiResponse = await fetch("/api/ai-feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversation }),
+        });
+
+        const aiData = await aiResponse.json();
+
+        if (!aiResponse.ok) {
+          throw new Error(aiData.error || "AI feedback generation failed");
+        }
+
+        // Step 2: Save feedback to Supabase
+        const saveRes = await fetch("/api/save-feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userName,
+            userEmail,
+            interview_id: interviewId,
+            feedback: aiData,
+            recommendation,
+          }),
+        });
+
+        if (saveRes.ok) {
+          toast.success("Interview feedback saved successfully.");
+
+          // ✅ Update URL to include feedback=saved
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set("feedback", "saved");
+          window.history.replaceState(null, "", newUrl.toString());
+
+          // ✅ Optionally clear conversation from localStorage
+          localStorage.removeItem("conversation");
+        } else {
+          toast.error("Failed to save feedback.");
+        }
+      } catch (err) {
+        console.error("Feedback error:", err);
+        toast.error("Error generating or saving feedback.");
+      }
+    };
+
+    if (feedbackStatus !== "saved") {
+      generateAndSaveFeedback();
+    } else {
+      toast.success("Your interview feedback was saved successfully.");
     }
-  }, [feedbackStatus]);
+  }, [feedbackStatus, userName, userEmail, interviewId, recommendation]);
 
   return (
     <motion.div
@@ -25,17 +87,14 @@ function InterviewComplete() {
       transition={{ duration: 0.5 }}
       className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-gradient-to-b from-white to-blue-50 text-center"
     >
-      {/* Title */}
       <h1 className="text-3xl md:text-4xl font-bold text-blue-600 mb-4">
         🎉 Interview Completed!
       </h1>
 
-      {/* Subtitle */}
       <p className="text-gray-600 text-lg mb-8">
         Thank you, <span className="font-semibold">{userName}</span>. Your interview session has ended.
       </p>
 
-      {/* Center Image */}
       <Image
         src="/success.jpg"
         alt="Interview Completed"
@@ -45,7 +104,6 @@ function InterviewComplete() {
         priority
       />
 
-      {/* Info box */}
       <div className="bg-white shadow-md rounded-2xl p-6 w-full max-w-xl">
         <h2 className="text-xl font-semibold mb-2 text-green-600">What’s next?</h2>
         <p className="text-gray-700">
@@ -54,11 +112,8 @@ function InterviewComplete() {
         </p>
       </div>
 
-      {/* Home Button */}
       <div className="mt-8">
-        <Button onClick={() => window.location.href = "/"}>
-          Go Back Home
-        </Button>
+        <Button onClick={() => (window.location.href = "/")}>Go Back Home</Button>
       </div>
     </motion.div>
   );

@@ -140,40 +140,39 @@ function StartInterview() {
   };
 
   const GenerateFeedback = async () => {
-    if (!conversation || conversation.length === 0) {
-      toast.error("No conversation found. Cannot generate feedback.");
-      return;
+  if (!conversation || conversation.length === 0) {
+    toast.error("No conversation found. Cannot generate feedback.");
+    return;
+  }
+
+  try {
+    const result = await axios.post("/api/ai-feedback", { conversation });
+    const content = result?.data?.content;
+
+    if (!content) throw new Error("No content returned from feedback API");
+
+    const parsed = JSON.parse(content.replace("```json", "").replace("```", ""));
+
+    const saveRes = await axios.post("/api/save-feedback", {
+      userName: interviewInfo?.userName,
+      userEmail: interviewInfo?.userEmail,
+      interview_id,
+      feedback: parsed,
+      recommendation: false,
+    });
+
+    if (!saveRes.ok) {
+      toast.error("Failed to save feedback to database.");
     }
 
-    try {
-      const result = await axios.post("/api/ai-feedback", {
-        conversation,
-      });
+    // Navigate to completion page
+    router.replace(`/interview/${interview_id}/completed?user=${interviewInfo?.userName}&feedback=saved`);
+  } catch (error) {
+    console.error("❌ Feedback generation failed:", error);
+    toast.error("Failed to generate feedback");
+  }
+};
 
-      const content = result?.data?.content;
-      if (!content) throw new Error("No content returned from feedback API");
-
-      const FINAL_PROMPT = content.replace("```json", "").replace("```", "");
-
-      const { data, error } = await supabase
-        .from("interview-feedback")
-        .insert([
-          {
-            userName: interviewInfo?.userName,
-            userEmail: interviewInfo?.userEmail,
-            interview_id: interview_id,
-            feedback: JSON.parse(FINAL_PROMPT),
-            recommendation: false,
-          },
-        ])
-        .select();
-
-      router.replace(`/interview/${interview_id}/completed?user=${interviewInfo?.userName}&feedback=saved`);
-    } catch (error) {
-      console.error("❌ Feedback generation failed:", error);
-      toast.error("Failed to generate feedback");
-    }
-  };
 
   return (
     <div className="p-20 lg:px-48 xl:px-56">

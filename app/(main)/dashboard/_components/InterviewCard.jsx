@@ -81,7 +81,13 @@ export default function InterviewCard({ interviews = [] , viewDetail=false }) {
               </button>
             </div> 
       : <Link href={'/schedule-interview/'+interview?.interview_id+'/details'}>
-      <Button className='mt-5 w-full' variant='outline'>View Detail<ArrowRight/></Button>
+      <Button className="mt-5 w-full group" variant="outline">
+          View Detail
+          <span className="ml-2 transition-transform duration-200 group-hover:translate-x-1">
+            <ArrowRight />
+          </span>
+        </Button>
+
         </Link>    
       }
           </div>

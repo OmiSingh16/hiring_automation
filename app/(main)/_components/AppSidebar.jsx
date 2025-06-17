@@ -28,7 +28,9 @@ export function AppSidebar() {
           priority
         />
         </Link>
+        <Link href={'/dashboard/create-interview'}> 
         <Button className='w-full mt-5' ><Plus/>Create New Interview</Button>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup >
