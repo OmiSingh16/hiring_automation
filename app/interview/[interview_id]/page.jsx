@@ -117,7 +117,7 @@ function Interview() {
           />
         </div>
 
-        <div className="p-3 bg-blue-100 flex gap-4 rounded-lg mt-3">
+        <div className="p-3 bg-primary-100 flex gap-4 rounded-lg mt-3">
           <Info className="text-primary mt-1" />
           <div>
             <h2 className="font-bold mb-2">Before you begin</h2>
@@ -135,7 +135,7 @@ function Interview() {
           </div>
         </div>
         <Button
-          className="mt-5 w-full font-bold"
+          className="mt-5 w-full font-bold bg-primary text-primary-foreground "
           disabled={loading || !userName || !userEmail}
           onClick={onJoinInterview}
         >
