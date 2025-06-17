@@ -44,26 +44,39 @@ function HeroSection() {
           <div className="flex flex-col justify-center space-y-4">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                AI-Powered <span className="text-primary"> Interview Assistant </span> for Modern Recruiters
+                AI-Powered{" "}
+                <span className="text-primary"> Interview Assistant </span> for
+                Modern Recruiters
               </h1>
               <p className="text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Let our AI voice agent conduct candidate interviews while you focus on finding the perfect match. Save time, reduce bias, and improve your hiring process.
+                Let our AI voice agent conduct candidate interviews while you
+                focus on finding the perfect match. Save time, reduce bias, and
+                improve your hiring process.
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
               <Button
-                className="bg-primary text-primary-foreground hover:bg-blue-700"
+                className="bg-primary text-primary-foreground "
                 onClick={handleCreateInterview}
               >
                 Create Interview <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button variant="outline" onClick={() => setShowVideo(true)}>Watch Demo</Button>
+              <Button
+                variant="outline"
+                className="transition-transform duration-30 hover:scale-103"
+                onClick={() => setShowVideo(true)}
+              >
+                Watch Demo
+              </Button>
             </div>
           </div>
 
           <div className="mx-auto lg:mx-0 relative">
             <div className="relative h-[350px] w-full overflow-hidden rounded-xl bg-gray-100 shadow-lg">
-              <div className="group relative cursor-pointer" onClick={() => setShowVideo(true)}>
+              <div
+                className="group relative cursor-pointer"
+                onClick={() => setShowVideo(true)}
+              >
                 <Image
                   src="/home.png"
                   alt="Home"

@@ -11,37 +11,36 @@ function Provider({children}) {
         CreateNewUser();
     },[])
 
-    const CreateNewUser = ()=>{
+    const CreateNewUser = async () => {
+  const { data: { user: authUser }, error } = await supabase.auth.getUser();
+  if (!authUser) return;
 
-    supabase.auth.getUser().then(async({data:{user}})=>{
-      //check if user already exist
-      let { data: Users, error } = await supabase
-       .from('Users')
-       .select("*")
-       .eq('email',user?.email);
-       console.log(Users)
+  const { data: Users, error: userError } = await supabase
+    .from("Users")
+    .select("*")
+    .eq("email", authUser.email);
 
-      //If not then create new user
-      if(Users?.length==0){
-        const {data , error} = await supabase.from("Users")
-        .insert([
-          {
-            name:user?.user_metadata?.name,
-            email:user?.email,
-            picture:user?.user_metadata?.picture
+  if (Users?.length === 0) {
+    const { data: insertData, error: insertError } = await supabase
+      .from("Users")
+      .insert([
+        {
+          name: authUser.user_metadata?.name,
+          email: authUser.email,
+          picture: authUser.user_metadata?.picture,
+        }
+      ])
+      .select(); // ✅ important to get back the inserted data
 
-          }
-        ])
-        console.log(data);
-        setUser(data);
-        return;
-      }
+    if (insertData && insertData.length > 0) {
+      setUser(insertData[0]); // ✅ Set actual user object
+    }
+  } else {
+    setUser(Users[0]); // ✅ Use existing user
+  }
+};
 
-       setUser(Users[0]);
 
-    })
-
-  } 
 
 
   return (

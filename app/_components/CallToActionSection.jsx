@@ -22,9 +22,9 @@ function CallToActionSection() {
           </div>
           <div className="flex flex-col gap-2 min-[400px]:flex-row">
             <Link href="/dashboard/create-interview">
-            <Button className="bg-primary text-primary-foreground hover:bg-blue-700">Get Started for Free</Button>
+            <Button className="bg-primary text-primary-foreground hover:bg-indigo-400">Get Started for Free</Button>
             </Link>
-            <Button variant="outline">Schedule a Demo</Button>
+            <Button variant="outline" className="transition-transform duration-100 hover:scale-105">Schedule a Demo</Button>
           </div>
         </div>
       </div>

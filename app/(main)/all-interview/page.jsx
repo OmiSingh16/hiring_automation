@@ -4,10 +4,12 @@ import { supabase } from '@/services/supabaseClient';
 import { Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import React, { useEffect, useState } from 'react';
-import InterviewCard from './InterviewCard'; // ← use dynamic card here
-import Link from 'next/link';
 
-function LatestInterviewsList() {
+import Link from 'next/link';
+import InterviewCard from '../dashboard/_components/InterviewCard';
+
+
+function AllInterview() {
   const [interviewList, setInterviewList] = useState([]);
   const { user } = useUser();
 
@@ -22,9 +24,8 @@ function LatestInterviewsList() {
       .from('Interviews')
       .select('*')
       .eq('userEmail', user.email)
-      .order('id',{ascending:false})
-      .limit(5);
-
+      .order('id',{ascending:false});
+      
     if (error) {
       console.error('Error fetching interviews:', error);
     } else {
@@ -34,7 +35,7 @@ function LatestInterviewsList() {
 
   return (
     <div className="my-5">
-      <h2 className="font-bold text-2xl">Previously Created Interviews</h2>
+      <h2 className="font-bold text-2xl">All Interviews</h2>
 
       {interviewList.length === 0 ? (
         <div className="p-5 flex flex-col gap-3 items-center mt-5 bg-white rounded-lg border">
@@ -50,5 +51,4 @@ function LatestInterviewsList() {
     </div>
   );
 }
-
-export default LatestInterviewsList;
+export default AllInterview
