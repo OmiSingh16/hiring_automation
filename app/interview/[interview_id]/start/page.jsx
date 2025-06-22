@@ -92,9 +92,8 @@ function StartInterview() {
     setCallStatus("loading");
 
     try {
-      const questions = interviewInfo.interviewData?.questionList
-        ?.map((item) => item?.question)
-        .join("|");
+      const questionsArray = interviewInfo.interviewData?.questionList?.map((item) => item?.question);
+      const questions = questionsArray.join("|");
 
       const res = await fetch("/api/vapi/create-workflow", {
         method: "POST",
@@ -115,7 +114,7 @@ function StartInterview() {
         variableValues: {
           username: interviewInfo.userName,
           jobposition: interviewInfo.interviewData?.jobposition,
-          questions,
+          ...data.variableValues // Spread all dynamic question_1,2,3... values
         },
       });
     } catch (error) {
@@ -140,39 +139,33 @@ function StartInterview() {
   };
 
   const GenerateFeedback = async () => {
-  if (!conversation || conversation.length === 0) {
-    toast.error("No conversation found. Cannot generate feedback.");
-    return;
-  }
-
-  try {
-    const result = await axios.post("/api/ai-feedback", { conversation });
-    const content = result?.data?.content;
-
-    if (!content) throw new Error("No content returned from feedback API");
-
-    const parsed = JSON.parse(content.replace("```json", "").replace("```", ""));
-
-    const saveRes = await axios.post("/api/save-feedback", {
-      userName: interviewInfo?.userName,
-      userEmail: interviewInfo?.userEmail,
-      interview_id,
-      feedback: parsed,
-      recommendation: false,
-    });
-
-    if (!saveRes.ok) {
-      toast.error("Failed to save feedback to database.");
+    if (!conversation || conversation.length === 0) {
+      toast.error("No conversation found. Cannot generate feedback.");
+      return;
     }
 
-    // Navigate to completion page
-    router.replace(`/interview/${interview_id}/completed?user=${interviewInfo?.userName}&feedback=saved`);
-  } catch (error) {
-    console.error("❌ Feedback generation failed:", error);
-    toast.error("Failed to generate feedback");
-  }
-};
+    try {
+      const result = await axios.post("/api/ai-feedback", { conversation });
+      const content = result?.data?.content;
 
+      if (!content) throw new Error("No content returned from feedback API");
+
+      const parsed = JSON.parse(content.replace("```json", "").replace("```", ""));
+
+      await axios.post("/api/save-feedback", {
+        userName: interviewInfo?.userName,
+        userEmail: interviewInfo?.userEmail,
+        interview_id,
+        feedback: parsed,
+        recommendation: false,
+      });
+
+      router.replace(`/interview/${interview_id}/completed?user=${interviewInfo?.userName}&feedback=saved`);
+    } catch (error) {
+      console.error("❌ Feedback generation failed:", error);
+      toast.error("Failed to generate feedback");
+    }
+  };
 
   return (
     <div className="p-20 lg:px-48 xl:px-56">
@@ -186,19 +179,16 @@ function StartInterview() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-7 mt-5">
         {/* AI Recruiter */}
-        <div
-          className={`bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center transition-all duration-300 ${
-            speakingAgent ? "ring-4 ring-blue-400 shadow-lg scale-105" : ""
-          }`}
-        >
-          <Image
-            src={"/ai.png"}
-            alt="ai"
-            width={100}
-            height={100}
-            className="w-[160px] h-[160px] rounded-full object-cover border border-gray-600"
-            priority
-          />
+        <div className={`bg-white h-[350px] rounded-lg border flex flex-col gap-3 items-center justify-center transition-all duration-300 ${speakingAgent ? "ring-4 ring-blue-400 shadow-lg scale-105" : ""}`}>
+         <Image
+              src={"/ai.jpg"}
+              alt="ai"
+              width={100}
+              height={100}
+              className="w-[130px] h-[130px] rounded-full object-cover border border-gray-600 brightness-130"
+              priority
+            />
+
           <h2>AI Recruiter</h2>
           <p className="text-sm text-gray-500">
             {callStatus === "active" ? "Speaking..." : "Ready to interview"}
@@ -206,13 +196,7 @@ function StartInterview() {
         </div>
 
         {/* User */}
-        <div
-          className={`bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center relative transition-all duration-300 ${
-            callStatus === "active" && !speakingAgent
-              ? "ring-4 ring-green-400 shadow-lg scale-105"
-              : ""
-          }`}
-        >
+        <div className={`bg-white h-[350px] rounded-lg border flex flex-col gap-3 items-center justify-center relative transition-all duration-300 ${callStatus === "active" && !speakingAgent ? "ring-4 ring-green-400 shadow-lg scale-105" : ""}`}>
           <div className="relative w-[120px] h-[120px] flex items-center justify-center">
             <div className="w-[100px] h-[100px] flex items-center justify-center text-5xl bg-primary text-white rounded-full z-10 relative">
               {interviewInfo?.userName?.[0]?.toUpperCase() || "U"}
@@ -242,9 +226,7 @@ function StartInterview() {
           <button
             onClick={startCall}
             disabled={callStatus === "loading"}
-            className={`bg-green-500 text-white rounded-full p-3 ${
-              callStatus === "loading" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-            }`}
+            className={`bg-green-500 text-white rounded-full p-3 ${callStatus === "loading" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
           >
             {callStatus === "loading" ? (
               <Loader2Icon className="animate-spin h-6 w-6" />

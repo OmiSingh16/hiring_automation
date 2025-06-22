@@ -3,7 +3,6 @@
 import React, { useEffect } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -20,6 +19,10 @@ function InterviewComplete() {
       ? JSON.parse(localStorage.getItem("conversation") || "[]")
       : [];
 
+  // ✅ Auto-close tab after 10 seconds
+ 
+
+  // ✅ Generate and save feedback
   useEffect(() => {
     const generateAndSaveFeedback = async () => {
       if (!interviewId) {
@@ -28,7 +31,6 @@ function InterviewComplete() {
       }
 
       try {
-        // Step 1: Generate AI feedback
         const aiResponse = await fetch("/api/ai-feedback", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -36,12 +38,10 @@ function InterviewComplete() {
         });
 
         const aiData = await aiResponse.json();
-
         if (!aiResponse.ok) {
           throw new Error(aiData.error || "AI feedback generation failed");
         }
 
-        // Step 2: Save feedback to Supabase
         const saveRes = await fetch("/api/save-feedback", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56,13 +56,9 @@ function InterviewComplete() {
 
         if (saveRes.ok) {
           toast.success("Interview feedback saved successfully.");
-
-          // ✅ Update URL to include feedback=saved
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.set("feedback", "saved");
           window.history.replaceState(null, "", newUrl.toString());
-
-          // ✅ Optionally clear conversation from localStorage
           localStorage.removeItem("conversation");
         } else {
           toast.error("Failed to save feedback.");
@@ -112,9 +108,15 @@ function InterviewComplete() {
         </p>
       </div>
 
-      <div className="mt-8">
-        <Button onClick={() => (window.location.href = "/")}>Go Back Home</Button>
+
+      <div className="bg-primary shadow-md rounded-2xl p-3 w-fit mt-8">
+        
+        <p className="text-white">
+          Interview session ended. You may now close this tab.
+        </p>
       </div>
+
+      
     </motion.div>
   );
 }
